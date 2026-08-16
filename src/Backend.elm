@@ -1,12 +1,19 @@
 module Backend exposing (app, init, update, updateFromFrontend)
 
+import Duration
+import Effect.Command as Command exposing (BackendOnly, Command)
+import Effect.Lamdera
+import Effect.Subscription as Subscription exposing (Subscription)
+import Effect.Time
 import Lamdera exposing (ClientId, SessionId)
 import Time
 import Types exposing (..)
 
 
 app =
-    Lamdera.backend
+    Effect.Lamdera.backend
+        Lamdera.broadcast
+        Lamdera.sendToFrontend
         { init = init
         , update = update
         , updateFromFrontend = updateFromFrontend
@@ -14,27 +21,27 @@ app =
         }
 
 
-init : ( BackendModel, Cmd BackendMsg )
+init : ( BackendModel, Command BackendOnly ToFrontend BackendMsg )
 init =
     ( { countToFrontendState = Nothing }
-    , Cmd.none
+    , Command.none
     )
 
 
 {-| The timer only runs while there is a count in progress. 30ms is the same
 interval the real app steps its backend export on.
 -}
-subscriptions : BackendModel -> Sub BackendMsg
+subscriptions : BackendModel -> Subscription BackendOnly BackendMsg
 subscriptions model =
     case model.countToFrontendState of
         Just _ ->
-            Time.every 30 (\_ -> CountToFrontendStep)
+            Effect.Time.every (Duration.milliseconds 30) (\_ -> CountToFrontendStep)
 
         Nothing ->
-            Sub.none
+            Subscription.none
 
 
-update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
+update : BackendMsg -> BackendModel -> ( BackendModel, Command BackendOnly ToFrontend BackendMsg )
 update msg model =
     case msg of
         CountToFrontendStep ->
@@ -57,19 +64,21 @@ update msg model =
                                                 0
                                     }
                         }
-                    , Lamdera.sendToFrontend countState.clientId (CountToFrontend countState.count)
+                    , Effect.Lamdera.sendToFrontend
+                        (Effect.Lamdera.clientIdFromString countState.clientId)
+                        (CountToFrontend countState.count)
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( model, Command.none )
 
 
-updateFromFrontend : SessionId -> ClientId -> ToBackend -> BackendModel -> ( BackendModel, Cmd BackendMsg )
+updateFromFrontend : Effect.Lamdera.SessionId -> Effect.Lamdera.ClientId -> ToBackend -> BackendModel -> ( BackendModel, Command BackendOnly ToFrontend BackendMsg )
 updateFromFrontend _ clientId msg model =
     case msg of
         CountToBackendRequest ->
-            ( { model | countToFrontendState = Just { count = 0, clientId = clientId, busyWork = 0 } }
-            , Cmd.none
+            ( { model | countToFrontendState = Just { count = 0, clientId = Effect.Lamdera.clientIdToString clientId, busyWork = 0 } }
+            , Command.none
             )
 
 

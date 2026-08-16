@@ -1,7 +1,10 @@
 module Frontend exposing (app)
 
 import Browser exposing (UrlRequest(..))
-import Browser.Navigation as Nav
+import Effect.Browser.Navigation as Nav
+import Effect.Command as Command exposing (Command, FrontendOnly)
+import Effect.Lamdera
+import Effect.Subscription as Subscription
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -11,56 +14,52 @@ import Url
 
 
 app =
-    Lamdera.frontend
+    Effect.Lamdera.frontend
+        Lamdera.sendToBackend
         { init = init
         , onUrlRequest = UrlClicked
         , onUrlChange = UrlChanged
         , update = update
         , updateFromBackend = updateFromBackend
-        , subscriptions = \_ -> Sub.none
+        , subscriptions = \_ -> Subscription.none
         , view = view
         }
 
 
-init : Url.Url -> Nav.Key -> ( FrontendModel, Cmd FrontendMsg )
+init : Url.Url -> Nav.Key -> ( FrontendModel, Command FrontendOnly ToBackend FrontendMsg )
 init _ key =
-    ( { key = key, received = "" }
-    , Cmd.none
+    ( { received = "" }
+    , Command.none
     )
 
 
-update : FrontendMsg -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
+update : FrontendMsg -> FrontendModel -> ( FrontendModel, Command FrontendOnly ToBackend FrontendMsg )
 update msg model =
     case msg of
         UrlClicked urlRequest ->
-            case urlRequest of
-                Internal url ->
-                    ( model, Nav.pushUrl model.key (Url.toString url) )
-
-                External url ->
-                    ( model, Nav.load url )
+            ( model, Command.none )
 
         UrlChanged _ ->
-            ( model, Cmd.none )
+            ( model, Command.none )
 
         PressedCountToBackend ->
             ( { model | received = "" }
-            , Lamdera.sendToBackend CountToBackendRequest
+            , Effect.Lamdera.sendToBackend CountToBackendRequest
             )
 
         NoOpFrontendMsg ->
-            ( model, Cmd.none )
+            ( model, Command.none )
 
 
 {-| Every count that arrives is appended, so the whole sequence can be read
 afterwards rather than only whichever one happened to arrive last.
 -}
-updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Cmd FrontendMsg )
+updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Command FrontendOnly ToBackend FrontendMsg )
 updateFromBackend msg model =
     case msg of
         CountToFrontend count ->
             ( { model | received = model.received ++ " " ++ String.fromInt count }
-            , Cmd.none
+            , Command.none
             )
 
 
