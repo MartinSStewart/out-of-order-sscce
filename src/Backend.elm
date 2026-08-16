@@ -50,8 +50,8 @@ update msg model =
                                     { countState
                                         | count = countState.count + 1
                                         , busyWork =
-                                            if modBy 2 countState.count == 0 then
-                                                slowlyCountTo 14000000 countState.busyWork
+                                            if modBy 3 countState.count == 0 then
+                                                slowlyCountTo 24000000 countState.busyWork
 
                                             else
                                                 0
