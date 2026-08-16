@@ -82,5 +82,8 @@ view model =
                 ]
                 [ Html.text model.received ]
             ]
+        , List.range 0 10000
+            |> List.map (\index -> Html.button [] [ Html.text (String.fromInt index) ])
+            |> Html.div []
         ]
     }
