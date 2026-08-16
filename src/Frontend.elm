@@ -58,7 +58,7 @@ updateFromBackend : ToFrontend -> FrontendModel -> ( FrontendModel, Command Fron
 updateFromBackend msg model =
     case msg of
         CountToFrontend count ->
-            ( { model | received = model.received ++ " " ++ String.fromInt count }
+            ( { model | received = model.received ++ "\n" ++ String.fromInt count }
             , Command.none
             )
 
@@ -78,6 +78,7 @@ view model =
                 [ Html.Attributes.style "font-family" "monospace"
                 , Html.Attributes.style "line-height" "1.6"
                 , Html.Attributes.style "word-break" "break-all"
+                , Html.Attributes.style "white-space" "pre"
                 ]
                 [ Html.text model.received ]
             ]
